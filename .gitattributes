@@ -1,0 +1,23 @@
+# Auto detect text files and ensure consistent line endings
+* text=auto
+
+# Force UTF-8 encoding for all text source files
+*.cs text diff=csharp
+*.xaml text
+*.xaml.cs text diff=csharp
+*.csproj text
+*.sln text
+*.md text
+*.json text
+*.xml text
+*.config text
+
+# Prevent binary files from being treated as text
+*.png binary
+*.jpg binary
+*.ico binary
+*.gif binary
+*.bmp binary
+*.dll binary
+*.exe binary
+*.pdb binary

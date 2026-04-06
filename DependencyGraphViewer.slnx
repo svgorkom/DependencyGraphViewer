@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Application/">
+    <Project Path="Application/DependencyGraphViewer.csproj" />
+  </Folder>
+  <Folder Name="/Documentation/">
+    <File Path="ApplicationFunctionality.md" />
+  </Folder>
+  <Project Path="GraphParser/GraphParser.csproj" />
+</Solution>

@@ -1,0 +1,12 @@
+Timestamp;Action;Parameters;Result;AdditionalInfo
+2026-01-05 08:03:49.582;AddJob;ID:job1-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:;-;
+2026-01-05 08:03:49.582;AssignJob;Job: 'ID:job1-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:' requested shuttle to assign: 'shuttle1';True;
+2026-01-05 08:03:49.583;AddJob;ID:job2-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:;-;
+2026-01-05 08:03:49.583;AssignJob;Job: 'ID:job2-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:' requested shuttle to assign: 'shuttle2';True;
+2026-01-05 08:03:49.583;AddJob;ID:job3-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:;-;
+2026-01-05 08:03:49.583;AssignJob;Job: 'ID:job3-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:' requested shuttle to assign: 'shuttle3';True;
+2026-01-05 08:03:49.585;AddJob;ID:job4-SN:2-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:;-;job1 -> job4 # job2 -> job4 # job3 -> job4 # 
+2026-01-05 08:03:49.585;AssignJob;Job: 'ID:job4-SN:2-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:' requested shuttle to assign: 'shuttle4';True;
+2026-01-05 08:03:49.585;UnassignJob;Job: 'ID:job1-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:shuttle1' requested shuttle to unassign from shuttle;True;
+2026-01-05 08:03:49.585;UnassignJob;Job: 'ID:job2-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:shuttle2' requested shuttle to unassign from shuttle;True;
+2026-01-05 08:03:49.585;UnassignJob;Job: 'ID:job3-SN:1-LEVEL:1-EXIT:LD020101-ORTB:False-SHUTTLE:shuttle3' requested shuttle to unassign from shuttle;True;
