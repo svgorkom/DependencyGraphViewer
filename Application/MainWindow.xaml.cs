@@ -91,8 +91,11 @@ public partial class MainWindow : Window
             TimeSlider.IsEnabled = true;
             PlayPauseButton.IsEnabled = true;
             ResetViewButton.IsEnabled = true;
+            ResetLayoutButton.IsEnabled = true;
             PlaceholderText.Visibility = Visibility.Collapsed;
             GraphWebView.Visibility = Visibility.Visible;
+
+            UpdateGraph();
         }
         else
         {
@@ -100,6 +103,7 @@ public partial class MainWindow : Window
             TimeSlider.IsEnabled = false;
             PlayPauseButton.IsEnabled = false;
             ResetViewButton.IsEnabled = false;
+            ResetLayoutButton.IsEnabled = false;
             TimestampLabel.Text = "—";
             ActionCountLabel.Text = string.Empty;
             await SendGraphToViewAsync(new GraphSnapshot());
@@ -246,6 +250,14 @@ public partial class MainWindow : Window
             return;
 
         await GraphWebView.ExecuteScriptAsync("resetView()");
+    }
+
+    private async void OnResetLayout(object sender, RoutedEventArgs e)
+    {
+        if (!_webViewReady)
+            return;
+
+        await GraphWebView.ExecuteScriptAsync("resetLayout()");
     }
 
     private async Task SendGraphToViewAsync(GraphSnapshot snapshot)

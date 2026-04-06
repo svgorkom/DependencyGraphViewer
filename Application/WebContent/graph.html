@@ -15,14 +15,14 @@
   }
 </style>
 <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
-<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
-<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+<script src="https://unpkg.com/elkjs@0.9.3/lib/elk.bundled.js"></script>
+<script src="https://unpkg.com/cytoscape-elk@2.2.0/dist/cytoscape-elk.js"></script>
 </head>
 <body>
 <div id="cy"></div>
 <div id="tooltip"></div>
 <script>
-cytoscape.use(cytoscapeDagre);
+cytoscape.use(cytoscapeElk);
 
 var levelColors = [
   '#2E75B6', '#27AE60', '#E67E22', '#8E44AD', '#E74C3C',
@@ -153,6 +153,20 @@ cy.on('tap', function (e) {
   }
 });
 
+var elkLayoutOptions = {
+  name: 'elk',
+  elk: {
+    algorithm: 'layered',
+    'elk.direction': 'DOWN',
+    'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+    'elk.layered.spacing.nodeNode': '40',
+    'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+    'elk.layered.wrapping.strategy': 'MULTI_EDGE',
+    'elk.layered.compaction.connectedComponents': 'true',
+    'elk.layered.compaction.postCompaction.strategy': 'EDGE_LENGTH'
+  }
+};
+
 function buildNodeData(n) {
   var lvl = n.level || 0;
   var color = levelColors[lvl % levelColors.length];
@@ -209,18 +223,13 @@ function renderGraph(jsonStr) {
   // Determine layout strategy
   if (!hadElements || addedNodeIds.length === data.nodes.length) {
     // First render or entirely new graph: full layout with fit
-    cy.layout({
-      name: 'dagre',
-      rankDir: 'TB',
-      nodeSep: 60,
-      rankSep: 80,
-      edgeSep: 20,
+    cy.layout(Object.assign({}, elkLayoutOptions, {
       animate: false,
       fit: true,
       padding: 30
-    }).run();
+    })).run();
   } else if (addedNodeIds.length > 0) {
-    // New nodes added to existing graph: run dagre to position them,
+    // New nodes added to existing graph: run ELK to position them,
     // then restore existing node positions and viewport
     var addedSet = {};
     addedNodeIds.forEach(function (id) { addedSet[id] = true; });
@@ -234,24 +243,19 @@ function renderGraph(jsonStr) {
     var prevZoom = cy.zoom();
     var prevPan = { x: cy.pan().x, y: cy.pan().y };
 
-    cy.layout({
-      name: 'dagre',
-      rankDir: 'TB',
-      nodeSep: 60,
-      rankSep: 80,
-      edgeSep: 20,
+    cy.layout(Object.assign({}, elkLayoutOptions, {
       animate: false,
       fit: false,
-      padding: 30
-    }).run();
-
-    // Restore positions of previously existing nodes
-    Object.keys(savedPositions).forEach(function (id) {
-      cy.getElementById(id).position(savedPositions[id]);
-    });
-
-    cy.zoom(prevZoom);
-    cy.pan(prevPan);
+      padding: 30,
+      stop: function () {
+        // Restore positions of previously existing nodes
+        Object.keys(savedPositions).forEach(function (id) {
+          cy.getElementById(id).position(savedPositions[id]);
+        });
+        cy.zoom(prevZoom);
+        cy.pan(prevPan);
+      }
+    })).run();
   }
   // else: only removals or data updates — positions and viewport are already preserved
 }
@@ -259,6 +263,16 @@ function renderGraph(jsonStr) {
 function resetView() {
   if (cy.nodes().length > 0) {
     cy.fit(cy.elements(), 30);
+  }
+}
+
+function resetLayout() {
+  if (cy.nodes().length > 0) {
+    cy.layout(Object.assign({}, elkLayoutOptions, {
+      animate: false,
+      fit: true,
+      padding: 30
+    })).run();
   }
 }
 </script>
