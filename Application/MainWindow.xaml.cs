@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly UserSettings _settings = UserSettings.Load();
     private bool _isPlaying;
     private double _speedMultiplier = 1.0;
+    private int _highlightDepth = 1;
     private double _timeScaleFactor = 1.0;
     private bool _webViewReady;
 
@@ -195,11 +196,44 @@ public partial class MainWindow : Window
         ScheduleNextTick();
     }
 
-    private void OnSpeedChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnSpeedDecrease(object sender, RoutedEventArgs e)
     {
-        _speedMultiplier = Math.Pow(2, e.NewValue);
-        if (SpeedLabel is not null)
-            SpeedLabel.Text = $"{_speedMultiplier:F1}×";
+        if (_speedMultiplier > 1)
+        {
+            _speedMultiplier--;
+            SpeedLabel.Text = $"{(int)_speedMultiplier}×";
+        }
+    }
+
+    private void OnSpeedIncrease(object sender, RoutedEventArgs e)
+    {
+        if (_speedMultiplier < 20)
+        {
+            _speedMultiplier++;
+            SpeedLabel.Text = $"{(int)_speedMultiplier}×";
+        }
+    }
+
+    private async void OnHighlightDepthDecrease(object sender, RoutedEventArgs e)
+    {
+        if (_highlightDepth > 1)
+        {
+            _highlightDepth--;
+            HighlightDepthLabel.Text = _highlightDepth.ToString();
+            if (_webViewReady)
+                await GraphWebView.ExecuteScriptAsync($"setHighlightDepth({_highlightDepth})");
+        }
+    }
+
+    private async void OnHighlightDepthIncrease(object sender, RoutedEventArgs e)
+    {
+        if (_highlightDepth < 10)
+        {
+            _highlightDepth++;
+            HighlightDepthLabel.Text = _highlightDepth.ToString();
+            if (_webViewReady)
+                await GraphWebView.ExecuteScriptAsync($"setHighlightDepth({_highlightDepth})");
+        }
     }
 
     private static double ComputeTimeScaleFactor(IReadOnlyList<GraphAction> actions)

@@ -13,6 +13,37 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.25); max-width: 280px;
     white-space: pre-line; z-index: 10;
   }
+  #legend {
+    position: absolute; top: 12px; right: 12px; z-index: 10;
+    font: 12px 'Segoe UI', sans-serif;
+  }
+  #legend-toggle {
+    width: 28px; height: 28px; border: none; border-radius: 6px; cursor: pointer;
+    background: rgba(44,62,80,0.82); color: #fff; font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); display: flex;
+    align-items: center; justify-content: center; margin-left: auto;
+  }
+  #legend-toggle:hover { background: rgba(44,62,80,1); }
+  #legend-panel {
+    display: none; margin-top: 6px; background: rgba(44,62,80,0.92);
+    color: #fff; border-radius: 8px; padding: 10px 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); min-width: 120px;
+  }
+  #legend-panel.open { display: block; }
+  .legend-title {
+    font-weight: 600; font-size: 12px; margin-bottom: 6px;
+    color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 2px 0; font-size: 12px;
+  }
+  .legend-swatch {
+    width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0;
+  }
+  .legend-empty {
+    color: rgba(255,255,255,0.5); font-style: italic; font-size: 11px;
+  }
 </style>
 <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
 <script src="https://unpkg.com/elkjs@0.9.3/lib/elk.bundled.js"></script>
@@ -21,8 +52,22 @@
 <body>
 <div id="cy"></div>
 <div id="tooltip"></div>
+<div id="legend">
+  <button id="legend-toggle" title="Toggle legend">ℹ</button>
+  <div id="legend-panel">
+    <div class="legend-title">Level Colours</div>
+    <div id="legend-items"><span class="legend-empty">No data</span></div>
+  </div>
+</div>
 <script>
 cytoscape.use(cytoscapeElk);
+
+document.getElementById('legend-toggle').addEventListener('click', function () {
+  var panel = document.getElementById('legend-panel');
+  var open = panel.classList.toggle('open');
+  this.textContent = open ? '×' : 'ℹ';
+  this.title = open ? 'Hide legend' : 'Toggle legend';
+});
 
 var levelColors = [
   '#2E75B6', '#27AE60', '#E67E22', '#8E44AD', '#E74C3C',
@@ -139,12 +184,25 @@ cy.on('mouseout', 'node', function () {
   tooltip.style.display = 'none';
 });
 
+var highlightDepth = 1;
+
+function setHighlightDepth(depth) {
+  highlightDepth = Math.max(1, Math.min(depth, 10));
+}
+
 cy.on('tap', 'node', function (e) {
   cy.elements().removeClass('highlighted dimmed');
   var node = e.target;
-  var neighbourhood = node.closedNeighborhood();
-  cy.elements().not(neighbourhood).addClass('dimmed');
-  neighbourhood.addClass('highlighted');
+  var collected = node.closedNeighborhood();
+  for (var i = 1; i < highlightDepth; i++) {
+    var expanded = cy.collection();
+    collected.nodes().forEach(function (n) {
+      expanded = expanded.merge(n.closedNeighborhood());
+    });
+    collected = collected.merge(expanded);
+  }
+  cy.elements().not(collected).addClass('dimmed');
+  collected.addClass('highlighted');
 });
 
 cy.on('tap', function (e) {
@@ -167,6 +225,84 @@ var elkLayoutOptions = {
   }
 };
 
+var currentLayout = null;
+
+function stopCurrentLayout() {
+  if (currentLayout) {
+    currentLayout.stop();
+    currentLayout = null;
+  }
+}
+
+function runFullLayout(fit) {
+  stopCurrentLayout();
+  currentLayout = cy.layout(Object.assign({}, elkLayoutOptions, {
+    animate: false,
+    fit: fit,
+    padding: 30,
+    stop: function () { currentLayout = null; }
+  }));
+  currentLayout.run();
+}
+
+function positionNewNodesNearNeighbors(addedNodeIds, edges) {
+  var addedSet = {};
+  addedNodeIds.forEach(function (id) { addedSet[id] = true; });
+
+  // Build adjacency from edge data, tracking direction
+  var parents = {};  // parents[id] = list of source nodes that have edges TO id
+  var children = {}; // children[id] = list of target nodes that id has edges TO
+  edges.forEach(function (e) {
+    if (!parents[e.target]) parents[e.target] = [];
+    parents[e.target].push(e.source);
+    if (!children[e.source]) children[e.source] = [];
+    children[e.source].push(e.target);
+  });
+
+  var bb = cy.nodes().boundingBox();
+  var fallbackX = (bb.x1 + bb.x2) / 2;
+  var fallbackY = bb.y2 + 80;
+
+  addedNodeIds.forEach(function (id, index) {
+    // Find existing neighbors (parents go above, children go below in DOWN layout)
+    var parentPositions = [];
+    (parents[id] || []).forEach(function (pid) {
+      if (!addedSet[pid]) {
+        var n = cy.getElementById(pid);
+        if (n.nonempty()) parentPositions.push(n.position());
+      }
+    });
+
+    var childPositions = [];
+    (children[id] || []).forEach(function (cid) {
+      if (!addedSet[cid]) {
+        var n = cy.getElementById(cid);
+        if (n.nonempty()) childPositions.push(n.position());
+      }
+    });
+
+    var allPositions = parentPositions.concat(childPositions);
+    var pos;
+
+    if (allPositions.length > 0) {
+      var ax = 0, ay = 0;
+      allPositions.forEach(function (p) { ax += p.x; ay += p.y; });
+      ax /= allPositions.length;
+      ay /= allPositions.length;
+
+      // Place below parents or above children, with horizontal spread to avoid overlap
+      var yOffset = parentPositions.length > 0 ? 80 : (childPositions.length > 0 ? -80 : 0);
+      var spread = (index - (addedNodeIds.length - 1) / 2) * 50;
+      pos = { x: ax + spread, y: ay + yOffset };
+    } else {
+      // No connected existing nodes: place below the current graph
+      pos = { x: fallbackX + (index - (addedNodeIds.length - 1) / 2) * 60, y: fallbackY + index * 40 };
+    }
+
+    cy.getElementById(id).position(pos);
+  });
+}
+
 function buildNodeData(n) {
   var lvl = n.level || 0;
   var color = levelColors[lvl % levelColors.length];
@@ -182,7 +318,9 @@ function renderGraph(jsonStr) {
   var data = JSON.parse(jsonStr);
 
   if (!data.nodes || data.nodes.length === 0) {
+    stopCurrentLayout();
     cy.elements().remove();
+    updateLegend();
     return;
   }
 
@@ -223,41 +361,36 @@ function renderGraph(jsonStr) {
   // Determine layout strategy
   if (!hadElements || addedNodeIds.length === data.nodes.length) {
     // First render or entirely new graph: full layout with fit
-    cy.layout(Object.assign({}, elkLayoutOptions, {
-      animate: false,
-      fit: true,
-      padding: 30
-    })).run();
+    runFullLayout(true);
   } else if (addedNodeIds.length > 0) {
-    // New nodes added to existing graph: run ELK to position them,
-    // then restore existing node positions and viewport
-    var addedSet = {};
-    addedNodeIds.forEach(function (id) { addedSet[id] = true; });
-
-    var savedPositions = {};
-    cy.nodes().forEach(function (node) {
-      if (!addedSet[node.id()]) {
-        savedPositions[node.id()] = { x: node.position('x'), y: node.position('y') };
-      }
-    });
-    var prevZoom = cy.zoom();
-    var prevPan = { x: cy.pan().x, y: cy.pan().y };
-
-    cy.layout(Object.assign({}, elkLayoutOptions, {
-      animate: false,
-      fit: false,
-      padding: 30,
-      stop: function () {
-        // Restore positions of previously existing nodes
-        Object.keys(savedPositions).forEach(function (id) {
-          cy.getElementById(id).position(savedPositions[id]);
-        });
-        cy.zoom(prevZoom);
-        cy.pan(prevPan);
-      }
-    })).run();
+    // Position new nodes near their connected existing neighbors
+    positionNewNodesNearNeighbors(addedNodeIds, data.edges);
   }
   // else: only removals or data updates — positions and viewport are already preserved
+
+  updateLegend();
+}
+
+function updateLegend() {
+  var levels = {};
+  cy.nodes().forEach(function (n) {
+    var lvl = n.data('level') || 0;
+    if (levels[lvl] === undefined) levels[lvl] = true;
+  });
+  var sorted = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
+  var container = document.getElementById('legend-items');
+  if (sorted.length === 0) {
+    container.innerHTML = '<span class="legend-empty">No data</span>';
+    return;
+  }
+  var html = '';
+  sorted.forEach(function (lvl) {
+    var color = levelColors[lvl % levelColors.length];
+    html += '<div class="legend-item">' +
+      '<span class="legend-swatch" style="background:' + color + '"></span>' +
+      'Level ' + lvl + '</div>';
+  });
+  container.innerHTML = html;
 }
 
 function resetView() {
@@ -268,11 +401,7 @@ function resetView() {
 
 function resetLayout() {
   if (cy.nodes().length > 0) {
-    cy.layout(Object.assign({}, elkLayoutOptions, {
-      animate: false,
-      fit: true,
-      padding: 30
-    })).run();
+    runFullLayout(true);
   }
 }
 </script>

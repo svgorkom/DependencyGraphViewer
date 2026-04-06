@@ -5,6 +5,7 @@
         Title="Dependency Graph Viewer"
         Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
         Background="#F0F2F5">
 
     <Grid Margin="16">
@@ -109,20 +110,65 @@
                 </DockPanel>
 
                 <!-- Speed control -->
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Left" Text="Speed:"
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Speed:"
                                FontSize="12" Foreground="#999" VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
-                    <TextBlock DockPanel.Dock="Left" x:Name="SpeedLabel"
-                               Text="1.0×" FontSize="12" Foreground="#666"
+                    <Button Content="−" Click="OnSpeedDecrease"
+                            Width="28" Height="28" FontSize="14"
+                            Background="#E0E0E0" Foreground="#333" BorderThickness="0"
+                            Cursor="Hand" VerticalAlignment="Center">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <TextBlock x:Name="SpeedLabel"
+                               Text="1×" FontSize="13" Foreground="#666"
                                FontWeight="SemiBold" VerticalAlignment="Center"
-                               Width="36"/>
-                    <Slider x:Name="SpeedSlider"
-                            Minimum="-2" Maximum="3" Value="0"
-                            IsSnapToTickEnabled="False"
-                            ValueChanged="OnSpeedChanged"
-                            VerticalAlignment="Center"/>
-                </DockPanel>
+                               TextAlignment="Center" Width="36"
+                               Margin="4,0,4,0"/>
+                    <Button Content="+" Click="OnSpeedIncrease"
+                            Width="28" Height="28" FontSize="14"
+                            Background="#E0E0E0" Foreground="#333" BorderThickness="0"
+                            Cursor="Hand" VerticalAlignment="Center">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <TextBlock Text="Highlight Depth:"
+                               FontSize="12" Foreground="#999" VerticalAlignment="Center"
+                               Margin="24,0,8,0"/>
+                    <Button Content="−" Click="OnHighlightDepthDecrease"
+                            Width="28" Height="28" FontSize="14"
+                            Background="#E0E0E0" Foreground="#333" BorderThickness="0"
+                            Cursor="Hand" VerticalAlignment="Center">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <TextBlock x:Name="HighlightDepthLabel"
+                               Text="1" FontSize="13" Foreground="#666"
+                               FontWeight="SemiBold" VerticalAlignment="Center"
+                               TextAlignment="Center" Width="36"
+                               Margin="4,0,4,0"/>
+                    <Button Content="+" Click="OnHighlightDepthIncrease"
+                            Width="28" Height="28" FontSize="14"
+                            Background="#E0E0E0" Foreground="#333" BorderThickness="0"
+                            Cursor="Hand" VerticalAlignment="Center">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>

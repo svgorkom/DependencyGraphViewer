@@ -108,21 +108,24 @@ public static class SequencingGraphCsvParser
                     snapshot.Nodes.TryAdd(jobInfo.Id, jobInfo);
             }
             else if (action.ActionType == GraphActionType.PickedUpFromOrtbByLift)
-            {
-                var nodeId = ParseNodeId(action.Parameters);
-                if (nodeId is not null)
                 {
-                    snapshot.Nodes.Remove(nodeId);
-                    snapshot.Edges.RemoveAll(e => e.Source == nodeId || e.Target == nodeId);
+                    var nodeId = ParseNodeId(action.Parameters);
+                    if (nodeId is not null)
+                    {
+                        snapshot.Nodes.Remove(nodeId);
+                        snapshot.Edges.RemoveAll(e => e.Source == nodeId || e.Target == nodeId);
+                    }
                 }
-            }
 
-            foreach (var edge in action.Edges)
-            {
-                snapshot.Nodes.TryAdd(edge.Source, new JobInfo(edge.Source, 0, 0, string.Empty));
-                snapshot.Nodes.TryAdd(edge.Target, new JobInfo(edge.Target, 0, 0, string.Empty));
-                snapshot.Edges.Add(edge);
-            }
+                if (action.ActionType != GraphActionType.PickedUpFromOrtbByLift)
+                {
+                    foreach (var edge in action.Edges)
+                    {
+                        snapshot.Nodes.TryAdd(edge.Source, new JobInfo(edge.Source, 0, 0, string.Empty));
+                        snapshot.Nodes.TryAdd(edge.Target, new JobInfo(edge.Target, 0, 0, string.Empty));
+                        snapshot.Edges.Add(edge);
+                    }
+                }
         }
 
         return snapshot;
@@ -175,7 +178,10 @@ public static class SequencingGraphCsvParser
         if (string.IsNullOrWhiteSpace(parameters))
             return null;
 
-        return ExtractValueAfterKey(parameters.AsSpan(), "ID:");
+        // Try the key-value format first (e.g. "ID:job1-SN:1-…").
+        // Fall back to treating the entire parameter string as a bare job ID
+        // (e.g. PickedUpFromOrtbByLift rows that contain only "Job_434641_e2M7wfVd").
+        return ExtractValueAfterKey(parameters.AsSpan(), "ID:") ?? parameters.Trim();
     }
 
     private static JobInfo? ParseJobParameters(string parameters)
