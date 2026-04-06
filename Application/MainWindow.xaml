@@ -30,6 +30,17 @@
                         </Style>
                     </Button.Resources>
                 </Button>
+                <Button DockPanel.Dock="Right" x:Name="ResetViewButton"
+                        Content="⟲  Fit All" Click="OnResetView"
+                        Padding="12,8" FontSize="13"
+                        Background="#5A9BD5" Foreground="White" BorderThickness="0"
+                        Cursor="Hand" IsEnabled="False">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
                 <TextBlock DockPanel.Dock="Left" x:Name="FileNameLabel"
                            Text="No file loaded" VerticalAlignment="Center"
                            Margin="16,0,0,0" FontSize="13" Foreground="#666"/>

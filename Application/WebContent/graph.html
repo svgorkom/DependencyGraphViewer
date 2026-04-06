@@ -153,45 +153,113 @@ cy.on('tap', function (e) {
   }
 });
 
+function buildNodeData(n) {
+  var lvl = n.level || 0;
+  var color = levelColors[lvl % levelColors.length];
+  var borderColor = shadeColor(color, -30);
+  var label = n.id;
+  if (n.sn > 0 || n.level > 0) {
+    label += '\nSN:' + n.sn + '  L:' + n.level;
+  }
+  return { id: n.id, label: label, color: color, borderColor: borderColor, sn: n.sn, level: n.level, exit: n.exit };
+}
+
 function renderGraph(jsonStr) {
   var data = JSON.parse(jsonStr);
-  cy.elements().remove();
 
-  if (!data.nodes || data.nodes.length === 0) return;
+  if (!data.nodes || data.nodes.length === 0) {
+    cy.elements().remove();
+    return;
+  }
 
+  var hadElements = cy.nodes().length > 0;
+
+  // Build lookup maps for new data
+  var newNodeMap = {};
+  data.nodes.forEach(function (n) { newNodeMap[n.id] = n; });
+  var newEdgeMap = {};
+  data.edges.forEach(function (e) { newEdgeMap[e.source + '->' + e.target] = e; });
+
+  // Remove nodes no longer present (also removes their connected edges)
+  cy.nodes().filter(function (node) { return !newNodeMap[node.id()]; }).remove();
+  // Remove remaining edges no longer present
+  cy.edges().filter(function (edge) { return !newEdgeMap[edge.id()]; }).remove();
+
+  // Add or update nodes, tracking which ones are new
+  var addedNodeIds = [];
   data.nodes.forEach(function (n) {
-    var lvl = n.level || 0;
-    var color = levelColors[lvl % levelColors.length];
-    var borderColor = shadeColor(color, -30);
-
-    var label = n.id;
-    if (n.sn > 0 || n.level > 0) {
-      label += '\nSN:' + n.sn + '  L:' + n.level;
+    var nodeData = buildNodeData(n);
+    var existing = cy.getElementById(n.id);
+    if (existing.nonempty()) {
+      existing.data(nodeData);
+    } else {
+      cy.add({ group: 'nodes', data: nodeData });
+      addedNodeIds.push(n.id);
     }
-
-    cy.add({
-      group: 'nodes',
-      data: { id: n.id, label: label, color: color, borderColor: borderColor, sn: n.sn, level: n.level, exit: n.exit }
-    });
   });
 
+  // Add new edges
   data.edges.forEach(function (e) {
-    cy.add({
-      group: 'edges',
-      data: { id: e.source + '->' + e.target, source: e.source, target: e.target }
-    });
+    var edgeId = e.source + '->' + e.target;
+    if (cy.getElementById(edgeId).empty()) {
+      cy.add({ group: 'edges', data: { id: edgeId, source: e.source, target: e.target } });
+    }
   });
 
-  cy.layout({
-    name: 'dagre',
-    rankDir: 'TB',
-    nodeSep: 60,
-    rankSep: 80,
-    edgeSep: 20,
-    animate: false,
-    fit: true,
-    padding: 30
-  }).run();
+  // Determine layout strategy
+  if (!hadElements || addedNodeIds.length === data.nodes.length) {
+    // First render or entirely new graph: full layout with fit
+    cy.layout({
+      name: 'dagre',
+      rankDir: 'TB',
+      nodeSep: 60,
+      rankSep: 80,
+      edgeSep: 20,
+      animate: false,
+      fit: true,
+      padding: 30
+    }).run();
+  } else if (addedNodeIds.length > 0) {
+    // New nodes added to existing graph: run dagre to position them,
+    // then restore existing node positions and viewport
+    var addedSet = {};
+    addedNodeIds.forEach(function (id) { addedSet[id] = true; });
+
+    var savedPositions = {};
+    cy.nodes().forEach(function (node) {
+      if (!addedSet[node.id()]) {
+        savedPositions[node.id()] = { x: node.position('x'), y: node.position('y') };
+      }
+    });
+    var prevZoom = cy.zoom();
+    var prevPan = { x: cy.pan().x, y: cy.pan().y };
+
+    cy.layout({
+      name: 'dagre',
+      rankDir: 'TB',
+      nodeSep: 60,
+      rankSep: 80,
+      edgeSep: 20,
+      animate: false,
+      fit: false,
+      padding: 30
+    }).run();
+
+    // Restore positions of previously existing nodes
+    Object.keys(savedPositions).forEach(function (id) {
+      cy.getElementById(id).position(savedPositions[id]);
+    });
+
+    cy.zoom(prevZoom);
+    cy.pan(prevPan);
+  }
+  // else: only removals or data updates — positions and viewport are already preserved
+}
+
+function resetView() {
+  if (cy.nodes().length > 0) {
+    cy.fit(cy.elements(), 30);
+  }
 }
 </script>
 </body>
