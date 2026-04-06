@@ -1,6 +1,7 @@
 <Window x:Class="DependencyGraphViewer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Dependency Graph Viewer"
         Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
@@ -41,7 +42,7 @@
                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
             </Border.Effect>
             <Grid>
-                <DockPanel x:Name="GraphPanel" Background="White" ClipToBounds="True"/>
+                <wv2:WebView2 x:Name="GraphWebView" Visibility="Collapsed"/>
                 <TextBlock x:Name="PlaceholderText"
                            Text="Open a CSV file to view the dependency graph"
                            HorizontalAlignment="Center" VerticalAlignment="Center"

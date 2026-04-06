@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: #fff; }
+  #cy { width: 100%; height: 100vh; }
+  #tooltip {
+    position: absolute; display: none; pointer-events: none;
+    background: rgba(44,62,80,0.92); color: #fff; padding: 8px 12px;
+    border-radius: 6px; font: 12px 'Segoe UI', sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); max-width: 280px;
+    white-space: pre-line; z-index: 10;
+  }
+</style>
+<script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+</head>
+<body>
+<div id="cy"></div>
+<div id="tooltip"></div>
+<script>
+cytoscape.use(cytoscapeDagre);
+
+var levelColors = [
+  '#2E75B6', '#27AE60', '#E67E22', '#8E44AD', '#E74C3C',
+  '#16A085', '#D35400', '#2980B9', '#C0392B', '#7D3C98'
+];
+
+function shadeColor(hex, amount) {
+  var num = parseInt(hex.replace('#', ''), 16);
+  var r = Math.min(255, Math.max(0, (num >> 16) + amount));
+  var g = Math.min(255, Math.max(0, ((num >> 8) & 0xFF) + amount));
+  var b = Math.min(255, Math.max(0, (num & 0xFF) + amount));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+var cy = cytoscape({
+  container: document.getElementById('cy'),
+  style: [
+    {
+      selector: 'node',
+      style: {
+        'shape': 'roundrectangle',
+        'width': 'label',
+        'height': 'label',
+        'padding': '10px',
+        'background-color': 'data(color)',
+        'background-opacity': 0.92,
+        'border-width': 2,
+        'border-color': 'data(borderColor)',
+        'label': 'data(label)',
+        'text-wrap': 'wrap',
+        'text-valign': 'center',
+        'text-halign': 'center',
+        'color': '#fff',
+        'font-size': '11px',
+        'font-family': "'Segoe UI', sans-serif",
+        'text-outline-width': 0
+      }
+    },
+    {
+      selector: 'edge',
+      style: {
+        'width': 1.8,
+        'line-color': '#B0BEC5',
+        'target-arrow-color': '#78909C',
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        'arrow-scale': 1.1,
+        'opacity': 0.8
+      }
+    },
+    {
+      selector: 'node:selected',
+      style: {
+        'border-width': 3,
+        'border-color': '#FFD700',
+        'background-opacity': 1
+      }
+    },
+    {
+      selector: 'node.highlighted',
+      style: {
+        'border-width': 3,
+        'border-color': '#FFD700'
+      }
+    },
+    {
+      selector: 'edge.highlighted',
+      style: {
+        'line-color': '#E74C3C',
+        'target-arrow-color': '#E74C3C',
+        'width': 3,
+        'opacity': 1,
+        'z-index': 10
+      }
+    },
+    {
+      selector: 'node.dimmed',
+      style: {
+        'opacity': 0.25
+      }
+    },
+    {
+      selector: 'edge.dimmed',
+      style: {
+        'opacity': 0.1
+      }
+    }
+  ],
+  elements: [],
+  layout: { name: 'grid' },
+  wheelSensitivity: 0.3,
+  minZoom: 0.1,
+  maxZoom: 5
+});
+
+var tooltip = document.getElementById('tooltip');
+
+cy.on('mouseover', 'node', function (e) {
+  var n = e.target.data();
+  var lines = [n.id];
+  if (n.sn > 0 || n.level > 0) lines.push('SN: ' + n.sn + '   Level: ' + n.level);
+  if (n.exit) lines.push('Exit: ' + n.exit);
+  tooltip.textContent = lines.join('\n');
+  tooltip.style.display = 'block';
+});
+
+cy.on('mousemove', 'node', function (e) {
+  var pos = e.renderedPosition || e.cyRenderedPosition;
+  tooltip.style.left = (pos.x + 14) + 'px';
+  tooltip.style.top = (pos.y + 14) + 'px';
+});
+
+cy.on('mouseout', 'node', function () {
+  tooltip.style.display = 'none';
+});
+
+cy.on('tap', 'node', function (e) {
+  cy.elements().removeClass('highlighted dimmed');
+  var node = e.target;
+  var neighbourhood = node.closedNeighborhood();
+  cy.elements().not(neighbourhood).addClass('dimmed');
+  neighbourhood.addClass('highlighted');
+});
+
+cy.on('tap', function (e) {
+  if (e.target === cy) {
+    cy.elements().removeClass('highlighted dimmed');
+  }
+});
+
+function renderGraph(jsonStr) {
+  var data = JSON.parse(jsonStr);
+  cy.elements().remove();
+
+  if (!data.nodes || data.nodes.length === 0) return;
+
+  data.nodes.forEach(function (n) {
+    var lvl = n.level || 0;
+    var color = levelColors[lvl % levelColors.length];
+    var borderColor = shadeColor(color, -30);
+
+    var label = n.id;
+    if (n.sn > 0 || n.level > 0) {
+      label += '\nSN:' + n.sn + '  L:' + n.level;
+    }
+
+    cy.add({
+      group: 'nodes',
+      data: { id: n.id, label: label, color: color, borderColor: borderColor, sn: n.sn, level: n.level, exit: n.exit }
+    });
+  });
+
+  data.edges.forEach(function (e) {
+    cy.add({
+      group: 'edges',
+      data: { id: e.source + '->' + e.target, source: e.source, target: e.target }
+    });
+  });
+
+  cy.layout({
+    name: 'dagre',
+    rankDir: 'TB',
+    nodeSep: 60,
+    rankSep: 80,
+    edgeSep: 20,
+    animate: false,
+    fit: true,
+    padding: 30
+  }).run();
+}
+</script>
+</body>
+</html>

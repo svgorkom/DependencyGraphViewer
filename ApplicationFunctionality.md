@@ -33,9 +33,11 @@ observe how dependencies are established.
 | **Timeline Slider** | A slider at the bottom ranges over all parsed actions (0 … N−1). Moving it recomputes and redraws the graph snapshot for that point in time. The current timestamp and action description are displayed above the slider. |
 | **Play / Pause** | A ▶ / ⏸ button starts or stops automatic playback through the timeline. Playback preserves the proportional timing between actions — larger time gaps produce proportionally longer pauses between steps. Because the raw timestamp deltas are often in the millisecond range, the application normalises them on file load so that the median step takes approximately 400 ms at 1× speed. When playback reaches the last action it stops automatically; pressing Play again restarts from the beginning. |
 | **Speed Control** | A logarithmic speed slider (0.25× … 8×) scales the playback speed. At 1× a typical (median) step takes ~400 ms; at higher multipliers steps are proportionally faster. If the original timestamp deltas are already in a human-perceivable range (≥ 400 ms median) the normalisation factor is 1 and playback matches real time. |
-| **Graph Rendering** | Graph visualisation is provided by the **AutomaticGraphLayout (MSAGL)** WPF control (`GraphViewer`). Nodes are rendered as blue rounded boxes with white label text showing the Job ID (and SN/Level when available). Edges are drawn as routed spline curves with arrowheads. The layout, edge routing, zoom, and pan are handled by MSAGL. |
-| **Hierarchical Layout** | MSAGL's Sugiyama (layered) layout arranges nodes top-to-bottom based on dependency direction. Node separation and minimum node dimensions are tuned for compact horizontal packing so the graph makes better use of the viewport. Layout is recomputed each time the graph snapshot changes. |
-| **Zoom & Pan** | Built-in via MSAGL — mouse wheel to zoom, click-and-drag to pan. |
+| **Graph Rendering** | Graph visualisation is provided by **Cytoscape.js** running inside a **WebView2** control. The C# code serialises each `GraphSnapshot` to JSON and passes it to the Cytoscape.js `renderGraph()` function via `ExecuteScriptAsync`. Cytoscape.js renders nodes as rounded rectangles with white label text. Nodes are **colour-coded by job level** (a palette of 10 distinct hues cycles for levels 0–9+). Labels show the Job ID and, when available, SN and Level. Edges are drawn as smooth bézier curves with arrowheads. |
+| **Hierarchical Layout** | The **dagre** layout algorithm (a Cytoscape.js extension) arranges nodes top-to-bottom based on dependency direction with configurable node separation (60 px) and rank separation (80 px). Layout is recomputed each time the graph snapshot changes and the viewport is auto-fitted. |
+| **Zoom & Pan** | Built-in via Cytoscape.js — mouse wheel to zoom, click-and-drag to pan. |
+| **Interactive Highlighting** | Clicking a node highlights it and its immediate neighbours (connected edges turn red, unrelated elements are dimmed). Clicking the background resets the highlight. |
+| **Tooltips** | Hovering over a node displays a tooltip showing ID, SN, Level, and Exit information. |
 
 ---
 
@@ -51,7 +53,7 @@ SequencingGraphCsvParser.Parse()   →  List<GraphAction>
 SequencingGraphCsvParser.BuildSnapshot(actions, sliderIndex)  →  GraphSnapshot
   │
   ▼
-MainWindow.UpdateGraph()           →  MSAGL GraphViewer (nodes + edges)
+MainWindow.UpdateGraph()           →  JSON → WebView2 (Cytoscape.js)
 ```
 
 ---

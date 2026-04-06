@@ -1,12 +1,11 @@
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 using GraphParser;
 using GraphParser.Models;
-using Microsoft.Msagl.Drawing;
-using Microsoft.Msagl.Layout.Layered;
-using Microsoft.Msagl.WpfGraphControl;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
-using MsaglColor = Microsoft.Msagl.Drawing.Color;
 
 namespace DependencyGraphViewer;
 
@@ -15,27 +14,40 @@ public partial class MainWindow : Window
     private const double MinPlaybackIntervalMs = 80;
     private const double BasePlaybackIntervalMs = 400;
 
-    private static readonly MsaglColor NodeFillColor = new(0x2E, 0x75, 0xB6);
-    private static readonly MsaglColor NodeBorderColor = new(0x21, 0x5C, 0x98);
-    private static readonly MsaglColor EdgeColor = new(0x95, 0xA5, 0xA6);
-
     private IReadOnlyList<GraphAction>? _actions;
     private readonly DispatcherTimer _playbackTimer = new();
-    private readonly GraphViewer _graphViewer = new();
     private bool _isPlaying;
     private double _speedMultiplier = 1.0;
     private double _timeScaleFactor = 1.0;
+    private bool _webViewReady;
 
     public MainWindow()
     {
         InitializeComponent();
-        _graphViewer.BindToPanel(GraphPanel);
 
         _playbackTimer.Tick += OnPlaybackTick;
         _playbackTimer.Interval = TimeSpan.FromMilliseconds(BasePlaybackIntervalMs);
+
+        Loaded += OnWindowLoaded;
     }
 
-    private void OnOpenFile(object sender, RoutedEventArgs e)
+    private async void OnWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        await GraphWebView.EnsureCoreWebView2Async();
+
+        var webContentPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WebContent");
+        GraphWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            "app.local", webContentPath, CoreWebView2HostResourceAccessKind.Allow);
+
+        GraphWebView.NavigationCompleted += (_, args) =>
+        {
+            _webViewReady = args.IsSuccess;
+        };
+
+        GraphWebView.CoreWebView2.Navigate("https://app.local/graph.html");
+    }
+
+    private async void OnOpenFile(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
         {
@@ -47,7 +59,7 @@ public partial class MainWindow : Window
             return;
 
         _actions = SequencingGraphCsvParser.Parse(dialog.FileName);
-        FileNameLabel.Text = System.IO.Path.GetFileName(dialog.FileName);
+        FileNameLabel.Text = Path.GetFileName(dialog.FileName);
 
         StopPlayback();
         _timeScaleFactor = ComputeTimeScaleFactor(_actions);
@@ -59,6 +71,7 @@ public partial class MainWindow : Window
             TimeSlider.IsEnabled = true;
             PlayPauseButton.IsEnabled = true;
             PlaceholderText.Visibility = Visibility.Collapsed;
+            GraphWebView.Visibility = Visibility.Visible;
         }
         else
         {
@@ -67,8 +80,9 @@ public partial class MainWindow : Window
             PlayPauseButton.IsEnabled = false;
             TimestampLabel.Text = "—";
             ActionCountLabel.Text = string.Empty;
-            _graphViewer.Graph = new Graph();
+            await SendGraphToViewAsync(new GraphSnapshot());
             PlaceholderText.Visibility = Visibility.Visible;
+            GraphWebView.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -177,7 +191,7 @@ public partial class MainWindow : Window
             : BasePlaybackIntervalMs / median;
     }
 
-    private void UpdateGraph()
+    private async void UpdateGraph()
     {
         if (_actions is null || _actions.Count == 0)
             return;
@@ -191,43 +205,32 @@ public partial class MainWindow : Window
         TimestampLabel.Text = _actions[index].Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
         ActionCountLabel.Text = $"Action {index + 1} of {_actions.Count}  ·  {_actions[index].ActionType}";
 
-        _graphViewer.Graph = BuildMsaglGraph(snapshot);
+        await SendGraphToViewAsync(snapshot);
     }
 
-    private static Graph BuildMsaglGraph(GraphSnapshot snapshot)
+    private async Task SendGraphToViewAsync(GraphSnapshot snapshot)
     {
-        var graph = new Graph();
-        graph.Attr.LayerDirection = LayerDirection.TB;
+        if (!_webViewReady)
+            return;
 
-        var layoutSettings = (SugiyamaLayoutSettings)graph.LayoutAlgorithmSettings;
-        layoutSettings.NodeSeparation = 10;
-        layoutSettings.MinNodeWidth = 5;
-        layoutSettings.MinNodeHeight = 5;
-
-        foreach (var (nodeId, jobInfo) in snapshot.Nodes)
+        var graphData = new
         {
-            var node = graph.AddNode(nodeId);
-            node.LabelText = jobInfo.Id;
-            node.Attr.FillColor = NodeFillColor;
-            node.Attr.Color = NodeBorderColor;
-            node.Attr.Shape = Shape.Box;
-            node.Attr.XRadius = 4;
-            node.Attr.YRadius = 4;
-            node.Label.FontColor = MsaglColor.White;
-            node.Label.FontSize = 10;
-
-            if (jobInfo.SequenceNumber > 0 || jobInfo.Level > 0 || !string.IsNullOrEmpty(jobInfo.Exit))
+            nodes = snapshot.Nodes.Select(n => new
             {
-                node.LabelText = $"{jobInfo.Id}\nSN:{jobInfo.SequenceNumber} L:{jobInfo.Level}";
-            }
-        }
+                id = n.Value.Id,
+                sn = n.Value.SequenceNumber,
+                level = n.Value.Level,
+                exit = n.Value.Exit
+            }).ToArray(),
+            edges = snapshot.Edges.Select(e => new
+            {
+                source = e.Source,
+                target = e.Target
+            }).ToArray()
+        };
 
-        foreach (var edge in snapshot.Edges)
-        {
-            var msaglEdge = graph.AddEdge(edge.Source, edge.Target);
-            msaglEdge.Attr.Color = EdgeColor;
-        }
-
-        return graph;
+        var json = JsonSerializer.Serialize(graphData);
+        var jsArg = JsonSerializer.Serialize(json);
+        await GraphWebView.ExecuteScriptAsync($"renderGraph({jsArg})");
     }
 }
