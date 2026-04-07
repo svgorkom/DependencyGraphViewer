@@ -121,8 +121,8 @@ public static class SequencingGraphCsvParser
                 {
                     foreach (var edge in action.Edges)
                     {
-                        snapshot.Nodes.TryAdd(edge.Source, new JobInfo(edge.Source, 0, 0, string.Empty));
-                        snapshot.Nodes.TryAdd(edge.Target, new JobInfo(edge.Target, 0, 0, string.Empty));
+                        snapshot.Nodes.TryAdd(edge.Source, new JobInfo(edge.Source, 0, "Unknown", string.Empty));
+                        snapshot.Nodes.TryAdd(edge.Target, new JobInfo(edge.Target, 0, "Unknown", string.Empty));
                         snapshot.Edges.Add(edge);
                     }
                 }
@@ -200,7 +200,7 @@ public static class SequencingGraphCsvParser
         var exit = ExtractValueAfterKey(span, "EXIT:") ?? string.Empty;
 
         var sequenceNumber = snStr is not null && int.TryParse(snStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sn) ? sn : 0;
-        var level = levelStr is not null && int.TryParse(levelStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lv) ? lv : 0;
+        var level = levelStr is not null && int.TryParse(levelStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lv) ? lv.ToString(CultureInfo.InvariantCulture) : "Unknown";
 
         return new JobInfo(id, sequenceNumber, level, exit);
     }

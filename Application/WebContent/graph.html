@@ -73,6 +73,7 @@ var levelColors = [
   '#2E75B6', '#27AE60', '#E67E22', '#8E44AD', '#E74C3C',
   '#16A085', '#D35400', '#2980B9', '#C0392B', '#7D3C98'
 ];
+var unknownColor = '#95A5A6';
 
 function shadeColor(hex, amount) {
   var num = parseInt(hex.replace('#', ''), 16);
@@ -168,7 +169,7 @@ var tooltip = document.getElementById('tooltip');
 cy.on('mouseover', 'node', function (e) {
   var n = e.target.data();
   var lines = [n.id];
-  if (n.sn > 0 || n.level > 0) lines.push('SN: ' + n.sn + '   Level: ' + n.level);
+  lines.push('SN: ' + n.sn + '   Level: ' + n.level);
   if (n.exit) lines.push('Exit: ' + n.exit);
   tooltip.textContent = lines.join('\n');
   tooltip.style.display = 'block';
@@ -304,14 +305,15 @@ function positionNewNodesNearNeighbors(addedNodeIds, edges) {
 }
 
 function buildNodeData(n) {
-  var lvl = n.level || 0;
-  var color = levelColors[lvl % levelColors.length];
+  var lvl = n.level;
+  var numericLevel = (lvl !== 'Unknown' && lvl !== '' && lvl != null) ? parseInt(lvl, 10) : NaN;
+  var color = isNaN(numericLevel) ? unknownColor : levelColors[numericLevel % levelColors.length];
   var borderColor = shadeColor(color, -30);
   var label = n.id;
-  if (n.sn > 0 || n.level > 0) {
-    label += '\nSN:' + n.sn + '  L:' + n.level;
+  if (n.sn > 0 || lvl !== 'Unknown') {
+    label += '\nSN:' + n.sn + '  L:' + lvl;
   }
-  return { id: n.id, label: label, color: color, borderColor: borderColor, sn: n.sn, level: n.level, exit: n.exit };
+  return { id: n.id, label: label, color: color, borderColor: borderColor, sn: n.sn, level: lvl, exit: n.exit };
 }
 
 function renderGraph(jsonStr) {
@@ -373,23 +375,36 @@ function renderGraph(jsonStr) {
 
 function updateLegend() {
   var levels = {};
+  var container = document.getElementById('legend-items');
   cy.nodes().forEach(function (n) {
-    var lvl = n.data('level') || 0;
+    var lvl = n.data('level');
+    if (lvl == null) lvl = 'Unknown';
     if (levels[lvl] === undefined) levels[lvl] = true;
   });
-  var sorted = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
-  var container = document.getElementById('legend-items');
-  if (sorted.length === 0) {
+  var keys = Object.keys(levels);
+  if (keys.length === 0) {
     container.innerHTML = '<span class="legend-empty">No data</span>';
     return;
   }
+  var numeric = [];
+  var hasUnknown = false;
+  keys.forEach(function (k) {
+    if (k === 'Unknown') { hasUnknown = true; }
+    else { var v = parseInt(k, 10); if (!isNaN(v)) numeric.push(v); }
+  });
+  numeric.sort(function (a, b) { return a - b; });
   var html = '';
-  sorted.forEach(function (lvl) {
+  numeric.forEach(function (lvl) {
     var color = levelColors[lvl % levelColors.length];
     html += '<div class="legend-item">' +
       '<span class="legend-swatch" style="background:' + color + '"></span>' +
       'Level ' + lvl + '</div>';
   });
+  if (hasUnknown) {
+    html += '<div class="legend-item">' +
+      '<span class="legend-swatch" style="background:' + unknownColor + '"></span>' +
+      'Unknown</div>';
+  }
   container.innerHTML = html;
 }
 
