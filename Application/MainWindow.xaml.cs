@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using GraphParser;
 using GraphParser.Models;
@@ -94,6 +95,31 @@ public partial class MainWindow : Window
         {
             MessageBox.Show($"Failed to load file: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void OnMinimize(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void OnMaximizeRestore(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void OnClose(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        // Toggle the maximize/restore glyph.
+        MaxRestoreButton.Content = WindowState == WindowState.Maximized
+            ? "\uE923"   // Restore
+            : "\uE922";  // Maximize
     }
 
     private async Task LoadFileAsync(string filePath)

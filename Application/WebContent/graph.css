@@ -1,5 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { overflow: hidden; background: #fff; }
+body { overflow: hidden; background: #F0F2F5; }
 #cy { width: 100%; height: 100vh; }
 #tooltip {
   position: absolute; display: none; pointer-events: none;

@@ -6,7 +6,15 @@
         Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
-        Background="#F0F2F5">
+        Background="#F0F2F5"
+        StateChanged="OnWindowStateChanged">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="8"/>
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
@@ -46,17 +54,85 @@
                 </Style>
             </Style.Resources>
         </Style>
+        <Style x:Key="CaptionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#333"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#19000000"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#33000000"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource CaptionButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E81123"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F1707A"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Custom title bar -->
+        <Border Grid.Row="0" Background="#E8EBF0" Padding="0">
+            <DockPanel Height="36">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#2E75B6"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="Dependency Graph Viewer" FontSize="12" Foreground="#333"
+                               FontFamily="Segoe UI" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="&#xE921;" Click="OnMinimize" Style="{StaticResource CaptionButtonStyle}"/>
+                    <Button x:Name="MaxRestoreButton" Content="&#xE922;" Click="OnMaximizeRestore" Style="{StaticResource CaptionButtonStyle}"/>
+                    <Button Content="&#xE8BB;" Click="OnClose" Style="{StaticResource CloseButtonStyle}"/>
+                </StackPanel>
+                <Border/>
+            </DockPanel>
+        </Border>
+
         <!-- Header bar -->
-        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="16,12" Margin="0,0,0,12">
+        <Border Grid.Row="1" Background="White" CornerRadius="0,0,8,8" Padding="16,12" Margin="16,0,16,12">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
             </Border.Effect>
@@ -79,7 +155,7 @@
         </Border>
 
         <!-- Graph surface with job list panel -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2" Margin="16,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="250" MinWidth="150" MaxWidth="500"/>
                 <ColumnDefinition Width="Auto"/>
@@ -225,7 +301,7 @@
         </Grid>
 
         <!-- Timeline slider -->
-        <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="16,12" Margin="0,12,0,0">
+        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="16,12" Margin="16,12,16,16">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
             </Border.Effect>
