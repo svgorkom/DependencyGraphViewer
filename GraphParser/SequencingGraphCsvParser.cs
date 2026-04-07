@@ -108,24 +108,24 @@ public static class SequencingGraphCsvParser
                     snapshot.Nodes.TryAdd(jobInfo.Id, jobInfo);
             }
             else if (action.ActionType == GraphActionType.PickedUpFromOrtbByLift)
+            {
+                var nodeId = ParseNodeId(action.Parameters);
+                if (nodeId is not null)
                 {
-                    var nodeId = ParseNodeId(action.Parameters);
-                    if (nodeId is not null)
-                    {
-                        snapshot.Nodes.Remove(nodeId);
-                        snapshot.Edges.RemoveAll(e => e.Source == nodeId || e.Target == nodeId);
-                    }
+                    snapshot.Nodes.Remove(nodeId);
+                    snapshot.Edges.RemoveWhere(e => e.Source == nodeId || e.Target == nodeId);
                 }
+            }
 
-                if (action.ActionType != GraphActionType.PickedUpFromOrtbByLift)
+            if (action.ActionType != GraphActionType.PickedUpFromOrtbByLift)
+            {
+                foreach (var edge in action.Edges)
                 {
-                    foreach (var edge in action.Edges)
-                    {
-                        snapshot.Nodes.TryAdd(edge.Source, new JobInfo(edge.Source, 0, "Unknown", string.Empty));
-                        snapshot.Nodes.TryAdd(edge.Target, new JobInfo(edge.Target, 0, "Unknown", string.Empty));
-                        snapshot.Edges.Add(edge);
-                    }
+                    snapshot.Nodes.TryAdd(edge.Source, new JobInfo(edge.Source, 0, "Unknown", string.Empty));
+                    snapshot.Nodes.TryAdd(edge.Target, new JobInfo(edge.Target, 0, "Unknown", string.Empty));
+                    snapshot.Edges.Add(edge);
                 }
+            }
         }
 
         return snapshot;

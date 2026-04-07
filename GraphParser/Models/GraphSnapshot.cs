@@ -7,5 +7,5 @@ namespace GraphParser.Models;
 public class GraphSnapshot
 {
     public Dictionary<string, JobInfo> Nodes { get; } = new();
-    public List<GraphEdge> Edges { get; } = new();
+    public HashSet<GraphEdge> Edges { get; } = [];
 }

@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -40,26 +39,40 @@ public partial class MainWindow : Window
 
     private async void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
-        await GraphWebView.EnsureCoreWebView2Async();
-
-        var webContentPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WebContent");
-        GraphWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-            "app.local", webContentPath, CoreWebView2HostResourceAccessKind.Allow);
-
-        GraphWebView.NavigationCompleted += async (_, args) =>
+        try
         {
-            _webViewReady = args.IsSuccess;
+            await GraphWebView.EnsureCoreWebView2Async();
 
-            if (_webViewReady
-                && _actions is null
-                && !string.IsNullOrEmpty(_settings.LastFilePath)
-                && File.Exists(_settings.LastFilePath))
+            var webContentPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WebContent");
+            GraphWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "app.local", webContentPath, CoreWebView2HostResourceAccessKind.Allow);
+
+            GraphWebView.NavigationCompleted += async (_, args) =>
             {
-                await LoadFileAsync(_settings.LastFilePath);
-            }
-        };
+                try
+                {
+                    _webViewReady = args.IsSuccess;
 
-        GraphWebView.CoreWebView2.Navigate("https://app.local/graph.html");
+                    if (_webViewReady
+                        && _actions is null
+                        && !string.IsNullOrEmpty(_settings.LastFilePath)
+                        && File.Exists(_settings.LastFilePath))
+                    {
+                        await LoadFileAsync(_settings.LastFilePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            };
+
+            GraphWebView.CoreWebView2.Navigate("https://app.local/graph.html");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to initialize: {ex.Message}", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void OnOpenFile(object sender, RoutedEventArgs e)
@@ -73,7 +86,14 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() != true)
             return;
 
-        await LoadFileAsync(dialog.FileName);
+        try
+        {
+            await LoadFileAsync(dialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load file: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task LoadFileAsync(string filePath)
@@ -221,23 +241,37 @@ public partial class MainWindow : Window
 
     private async void OnHighlightDepthDecrease(object sender, RoutedEventArgs e)
     {
-        if (_highlightDepth > 1)
+        try
         {
-            _highlightDepth--;
-            HighlightDepthLabel.Text = _highlightDepth.ToString();
-            if (_webViewReady)
-                await GraphWebView.ExecuteScriptAsync($"setHighlightDepth({_highlightDepth})");
+            if (_highlightDepth > 1)
+            {
+                _highlightDepth--;
+                HighlightDepthLabel.Text = _highlightDepth.ToString();
+                if (_webViewReady)
+                    await GraphWebView.ExecuteScriptAsync($"setHighlightDepth({_highlightDepth})");
+            }
+        }
+        catch (Exception)
+        {
+            // Non-critical — avoid crash on transient WebView errors.
         }
     }
 
     private async void OnHighlightDepthIncrease(object sender, RoutedEventArgs e)
     {
-        if (_highlightDepth < 10)
+        try
         {
-            _highlightDepth++;
-            HighlightDepthLabel.Text = _highlightDepth.ToString();
-            if (_webViewReady)
-                await GraphWebView.ExecuteScriptAsync($"setHighlightDepth({_highlightDepth})");
+            if (_highlightDepth < 10)
+            {
+                _highlightDepth++;
+                HighlightDepthLabel.Text = _highlightDepth.ToString();
+                if (_webViewReady)
+                    await GraphWebView.ExecuteScriptAsync($"setHighlightDepth({_highlightDepth})");
+            }
+        }
+        catch (Exception)
+        {
+            // Non-critical — avoid crash on transient WebView errors.
         }
     }
 
@@ -267,40 +301,61 @@ public partial class MainWindow : Window
 
     private async void UpdateGraph()
     {
-        if (_actions is null || _actions.Count == 0)
-            return;
+        try
+        {
+            if (_actions is null || _actions.Count == 0)
+                return;
 
-        var index = (int)TimeSlider.Value;
-        if (index < 0 || index >= _actions.Count)
-            return;
+            var index = (int)TimeSlider.Value;
+            if (index < 0 || index >= _actions.Count)
+                return;
 
-        var actions = _actions;
-        var snapshot = await Task.Run(() => SequencingGraphCsvParser.BuildSnapshot(actions, index));
+            var actions = _actions;
+            var snapshot = await Task.Run(() => SequencingGraphCsvParser.BuildSnapshot(actions, index));
 
-        TimestampLabel.Text = actions[index].Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        ActionCountLabel.Text = $"Action {index + 1} of {actions.Count}  ·  {actions[index].ActionType}";
+            TimestampLabel.Text = actions[index].Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            ActionCountLabel.Text = $"Action {index + 1} of {actions.Count}  ·  {actions[index].ActionType}";
 
-        _currentSnapshot = snapshot;
-        PopulateJobList();
-        PopulateExitList();
+            _currentSnapshot = snapshot;
+            PopulateJobList();
+            PopulateExitList();
 
-        await SendGraphToViewAsync(snapshot);
+            await SendGraphToViewAsync(snapshot);
+        }
+        catch (Exception)
+        {
+            // Non-critical — avoid crash on transient errors during graph update.
+        }
     }
 
     private async void OnResetView(object sender, RoutedEventArgs e)
     {
-        if (!_webViewReady)
-            return;
+        try
+        {
+            if (!_webViewReady)
+                return;
 
-        await GraphWebView.ExecuteScriptAsync("resetView()");
+            await GraphWebView.ExecuteScriptAsync("resetView()");
+        }
+        catch (Exception)
+        {
+            // Non-critical — avoid crash on transient WebView errors.
+        }
     }
 
     private async void OnResetLayout(object sender, RoutedEventArgs e)
     {
-        if (!_webViewReady)
-            return;
+        try
+        {
+            if (!_webViewReady)
+                return;
 
-        await GraphWebView.ExecuteScriptAsync("resetLayout()");
+            await GraphWebView.ExecuteScriptAsync("resetLayout()");
+        }
+        catch (Exception)
+        {
+            // Non-critical — avoid crash on transient WebView errors.
+        }
     }
 
     private void PopulateJobList()
@@ -311,21 +366,7 @@ public partial class MainWindow : Window
             var allJobIds = _currentSnapshot?.Nodes.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList()
                             ?? [];
 
-            var filter = JobSearchBox.Text.Trim();
-            IEnumerable<string> filtered;
-
-            if (string.IsNullOrEmpty(filter))
-            {
-                filtered = allJobIds;
-            }
-            else
-            {
-                var pattern = "^" + Regex.Escape(filter).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-                var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                filtered = allJobIds.Where(id => regex.IsMatch(id));
-            }
-
-            var items = filtered.ToList();
+            var items = WildcardFilter.Apply(allJobIds, JobSearchBox.Text.Trim());
             JobListBox.ItemsSource = items;
             JobCountLabel.Text = $"{items.Count} of {allJobIds.Count} jobs";
         }
@@ -345,17 +386,24 @@ public partial class MainWindow : Window
         if (_suppressJobListSelection || !_webViewReady)
             return;
 
-        _suppressExitListSelection = true;
-        try { ExitListBox.SelectedItem = null; } finally { _suppressExitListSelection = false; }
+        try
+        {
+            _suppressExitListSelection = true;
+            try { ExitListBox.SelectedItem = null; } finally { _suppressExitListSelection = false; }
 
-        if (JobListBox.SelectedItem is string selectedId)
-        {
-            var escapedId = JsonSerializer.Serialize(selectedId);
-            await GraphWebView.ExecuteScriptAsync($"selectNodeById({escapedId})");
+            if (JobListBox.SelectedItem is string selectedId)
+            {
+                var escapedId = JsonSerializer.Serialize(selectedId);
+                await GraphWebView.ExecuteScriptAsync($"selectNodeById({escapedId})");
+            }
+            else
+            {
+                await GraphWebView.ExecuteScriptAsync("selectNodeById(null)");
+            }
         }
-        else
+        catch (Exception)
         {
-            await GraphWebView.ExecuteScriptAsync("selectNodeById(null)");
+            // Non-critical — avoid crash on transient WebView errors.
         }
     }
 
@@ -372,21 +420,7 @@ public partial class MainWindow : Window
                                .ToList()
                            ?? [];
 
-            var filter = ExitSearchBox.Text.Trim();
-            IEnumerable<string> filtered;
-
-            if (string.IsNullOrEmpty(filter))
-            {
-                filtered = allExits;
-            }
-            else
-            {
-                var pattern = "^" + Regex.Escape(filter).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-                var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                filtered = allExits.Where(e => regex.IsMatch(e));
-            }
-
-            var items = filtered.ToList();
+            var items = WildcardFilter.Apply(allExits, ExitSearchBox.Text.Trim());
             ExitListBox.ItemsSource = items;
             ExitCountLabel.Text = $"{items.Count} of {allExits.Count} exits";
         }
@@ -406,17 +440,24 @@ public partial class MainWindow : Window
         if (_suppressExitListSelection || !_webViewReady)
             return;
 
-        _suppressJobListSelection = true;
-        try { JobListBox.SelectedItem = null; } finally { _suppressJobListSelection = false; }
+        try
+        {
+            _suppressJobListSelection = true;
+            try { JobListBox.SelectedItem = null; } finally { _suppressJobListSelection = false; }
 
-        if (ExitListBox.SelectedItem is string selectedExit)
-        {
-            var escapedExit = JsonSerializer.Serialize(selectedExit);
-            await GraphWebView.ExecuteScriptAsync($"highlightNodesByExit({escapedExit})");
+            if (ExitListBox.SelectedItem is string selectedExit)
+            {
+                var escapedExit = JsonSerializer.Serialize(selectedExit);
+                await GraphWebView.ExecuteScriptAsync($"highlightNodesByExit({escapedExit})");
+            }
+            else
+            {
+                await GraphWebView.ExecuteScriptAsync("highlightNodesByExit(null)");
+            }
         }
-        else
+        catch (Exception)
         {
-            await GraphWebView.ExecuteScriptAsync("highlightNodesByExit(null)");
+            // Non-critical — avoid crash on transient WebView errors.
         }
     }
 
