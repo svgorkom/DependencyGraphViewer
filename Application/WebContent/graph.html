@@ -426,6 +426,24 @@ function selectNodeById(id) {
   cy.animate({ center: { eles: node }, duration: 300 });
 }
 
+function highlightNodesByExit(exitValue) {
+  cy.elements().removeClass('highlighted dimmed');
+  if (!exitValue) return;
+  var matchingNodes = cy.nodes().filter(function (n) { return n.data('exit') === exitValue; });
+  if (matchingNodes.empty()) return;
+  var collected = matchingNodes.closedNeighborhood();
+  for (var i = 1; i < highlightDepth; i++) {
+    var expanded = cy.collection();
+    collected.nodes().forEach(function (n) {
+      expanded = expanded.merge(n.closedNeighborhood());
+    });
+    collected = collected.merge(expanded);
+  }
+  cy.elements().not(collected).addClass('dimmed');
+  collected.addClass('highlighted');
+  cy.animate({ fit: { eles: matchingNodes, padding: 50 }, duration: 300 });
+}
+
 function resetView() {
   if (cy.nodes().length > 0) {
     cy.fit(cy.elements(), 30);

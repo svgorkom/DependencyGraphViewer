@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private bool _webViewReady;
     private GraphSnapshot? _currentSnapshot;
     private bool _suppressJobListSelection;
+    private bool _suppressExitListSelection;
 
     public MainWindow()
     {
@@ -281,6 +282,7 @@ public partial class MainWindow : Window
 
         _currentSnapshot = snapshot;
         PopulateJobList();
+        PopulateExitList();
 
         await SendGraphToViewAsync(snapshot);
     }
@@ -343,6 +345,9 @@ public partial class MainWindow : Window
         if (_suppressJobListSelection || !_webViewReady)
             return;
 
+        _suppressExitListSelection = true;
+        try { ExitListBox.SelectedItem = null; } finally { _suppressExitListSelection = false; }
+
         if (JobListBox.SelectedItem is string selectedId)
         {
             var escapedId = JsonSerializer.Serialize(selectedId);
@@ -351,6 +356,67 @@ public partial class MainWindow : Window
         else
         {
             await GraphWebView.ExecuteScriptAsync("selectNodeById(null)");
+        }
+    }
+
+    private void PopulateExitList()
+    {
+        _suppressExitListSelection = true;
+        try
+        {
+            var allExits = _currentSnapshot?.Nodes.Values
+                               .Select(j => j.Exit)
+                               .Where(e => !string.IsNullOrEmpty(e))
+                               .Distinct(StringComparer.OrdinalIgnoreCase)
+                               .OrderBy(e => e, StringComparer.OrdinalIgnoreCase)
+                               .ToList()
+                           ?? [];
+
+            var filter = ExitSearchBox.Text.Trim();
+            IEnumerable<string> filtered;
+
+            if (string.IsNullOrEmpty(filter))
+            {
+                filtered = allExits;
+            }
+            else
+            {
+                var pattern = "^" + Regex.Escape(filter).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+                var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                filtered = allExits.Where(e => regex.IsMatch(e));
+            }
+
+            var items = filtered.ToList();
+            ExitListBox.ItemsSource = items;
+            ExitCountLabel.Text = $"{items.Count} of {allExits.Count} exits";
+        }
+        finally
+        {
+            _suppressExitListSelection = false;
+        }
+    }
+
+    private void OnExitSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        PopulateExitList();
+    }
+
+    private async void OnExitListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressExitListSelection || !_webViewReady)
+            return;
+
+        _suppressJobListSelection = true;
+        try { JobListBox.SelectedItem = null; } finally { _suppressJobListSelection = false; }
+
+        if (ExitListBox.SelectedItem is string selectedExit)
+        {
+            var escapedExit = JsonSerializer.Serialize(selectedExit);
+            await GraphWebView.ExecuteScriptAsync($"highlightNodesByExit({escapedExit})");
+        }
+        else
+        {
+            await GraphWebView.ExecuteScriptAsync("highlightNodesByExit(null)");
         }
     }
 
