@@ -59,19 +59,85 @@
             </DockPanel>
         </Border>
 
-        <!-- Graph surface -->
-        <Border Grid.Row="1" Background="White" CornerRadius="8" ClipToBounds="True">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-            </Border.Effect>
-            <Grid>
-                <wv2:WebView2 x:Name="GraphWebView" Visibility="Collapsed"/>
-                <TextBlock x:Name="PlaceholderText"
-                           Text="Open a CSV file to view the dependency graph"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="16" Foreground="#BBB"/>
-            </Grid>
-        </Border>
+        <!-- Graph surface with job list panel -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" MinWidth="150" MaxWidth="500"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Job list panel -->
+            <Border Grid.Column="0" Background="White" CornerRadius="8" ClipToBounds="True" Margin="0,0,6,0">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Jobs" FontWeight="SemiBold" FontSize="14"
+                               Foreground="#333" Margin="12,10,12,8"/>
+                    <Border DockPanel.Dock="Top" Margin="8,0,8,8" Padding="8,6"
+                            Background="#F5F6F8" CornerRadius="6" BorderBrush="#DDD" BorderThickness="1">
+                        <TextBox x:Name="JobSearchBox" BorderThickness="0" Background="Transparent"
+                                 FontSize="12" Foreground="#333"
+                                 TextChanged="OnJobSearchTextChanged">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <VisualBrush AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                                        <VisualBrush.Visual>
+                                                            <TextBlock Text="🔍 Search jobs (* = any, ? = single)"
+                                                                       FontSize="11" Foreground="#AAA" Margin="2,0,0,0"/>
+                                                        </VisualBrush.Visual>
+                                                    </VisualBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                    </Border>
+                    <TextBlock DockPanel.Dock="Bottom" x:Name="JobCountLabel"
+                               Text="" FontSize="11" Foreground="#999"
+                               Margin="12,4,12,8" HorizontalAlignment="Left"/>
+                    <ListBox x:Name="JobListBox" Margin="4,0,4,0"
+                             BorderThickness="0" Background="Transparent"
+                             SelectionChanged="OnJobListSelectionChanged"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="8,5"/>
+                                <Setter Property="FontSize" Value="12"/>
+                                <Setter Property="FontFamily" Value="Segoe UI"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch" Background="Transparent" Cursor="SizeWE"/>
+
+            <!-- Graph viewport -->
+            <Border Grid.Column="2" Background="White" CornerRadius="8" ClipToBounds="True">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <wv2:WebView2 x:Name="GraphWebView" Visibility="Collapsed"/>
+                    <TextBlock x:Name="PlaceholderText"
+                               Text="Open a CSV file to view the dependency graph"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontSize="16" Foreground="#BBB"/>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- Timeline slider -->
         <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="16,12" Margin="0,12,0,0">

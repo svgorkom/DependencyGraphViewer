@@ -1,6 +1,8 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using GraphParser;
 using GraphParser.Models;
@@ -22,6 +24,8 @@ public partial class MainWindow : Window
     private int _highlightDepth = 1;
     private double _timeScaleFactor = 1.0;
     private bool _webViewReady;
+    private GraphSnapshot? _currentSnapshot;
+    private bool _suppressJobListSelection;
 
     public MainWindow()
     {
@@ -275,6 +279,9 @@ public partial class MainWindow : Window
         TimestampLabel.Text = actions[index].Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
         ActionCountLabel.Text = $"Action {index + 1} of {actions.Count}  ·  {actions[index].ActionType}";
 
+        _currentSnapshot = snapshot;
+        PopulateJobList();
+
         await SendGraphToViewAsync(snapshot);
     }
 
@@ -292,6 +299,59 @@ public partial class MainWindow : Window
             return;
 
         await GraphWebView.ExecuteScriptAsync("resetLayout()");
+    }
+
+    private void PopulateJobList()
+    {
+        _suppressJobListSelection = true;
+        try
+        {
+            var allJobIds = _currentSnapshot?.Nodes.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList()
+                            ?? [];
+
+            var filter = JobSearchBox.Text.Trim();
+            IEnumerable<string> filtered;
+
+            if (string.IsNullOrEmpty(filter))
+            {
+                filtered = allJobIds;
+            }
+            else
+            {
+                var pattern = "^" + Regex.Escape(filter).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+                var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                filtered = allJobIds.Where(id => regex.IsMatch(id));
+            }
+
+            var items = filtered.ToList();
+            JobListBox.ItemsSource = items;
+            JobCountLabel.Text = $"{items.Count} of {allJobIds.Count} jobs";
+        }
+        finally
+        {
+            _suppressJobListSelection = false;
+        }
+    }
+
+    private void OnJobSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        PopulateJobList();
+    }
+
+    private async void OnJobListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressJobListSelection || !_webViewReady)
+            return;
+
+        if (JobListBox.SelectedItem is string selectedId)
+        {
+            var escapedId = JsonSerializer.Serialize(selectedId);
+            await GraphWebView.ExecuteScriptAsync($"selectNodeById({escapedId})");
+        }
+        else
+        {
+            await GraphWebView.ExecuteScriptAsync("selectNodeById(null)");
+        }
     }
 
     private async Task SendGraphToViewAsync(GraphSnapshot snapshot)

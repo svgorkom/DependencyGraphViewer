@@ -393,6 +393,24 @@ function updateLegend() {
   container.innerHTML = html;
 }
 
+function selectNodeById(id) {
+  cy.elements().removeClass('highlighted dimmed');
+  if (!id) return;
+  var node = cy.getElementById(id);
+  if (node.empty()) return;
+  var collected = node.closedNeighborhood();
+  for (var i = 1; i < highlightDepth; i++) {
+    var expanded = cy.collection();
+    collected.nodes().forEach(function (n) {
+      expanded = expanded.merge(n.closedNeighborhood());
+    });
+    collected = collected.merge(expanded);
+  }
+  cy.elements().not(collected).addClass('dimmed');
+  collected.addClass('highlighted');
+  cy.animate({ center: { eles: node }, duration: 300 });
+}
+
 function resetView() {
   if (cy.nodes().length > 0) {
     cy.fit(cy.elements(), 30);
