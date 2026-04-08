@@ -1,7 +1,8 @@
 # Application Functionality – Dependency Graph Viewer
 
-## Overview
+**This tool is AI generated.**
 
+## Overview
 The Dependency Graph Viewer is a WPF desktop application that visualises job
 dependency graphs extracted from **SZC.MPG.SequencingGraphActions.csv** log files.
 The graph builds up over time and the user can scrub through the timeline to
@@ -29,7 +30,8 @@ observe how dependencies are established.
 
 | Feature | Details |
 |---|---|
-| **Window** | The application window uses a **custom Windows Chrome** title bar via `WindowChrome`. The default OS title bar is replaced with a custom one that displays an app icon and title on the left, and minimize / maximize-restore / close buttons on the right (using **Segoe MDL2 Assets** glyphs). The close button shows a red hover state matching Windows 11 conventions. The title bar area is draggable and supports standard window management (double-click to maximize/restore, drag to move, snap layouts). The window starts **maximized**; the defined width (1100) and height (750) are retained as the restore size. The maximize/restore button glyph toggles automatically when the window state changes. |
+| **Window** | The application window uses a **custom Windows Chrome** title bar via `WindowChrome`. The default OS title bar is replaced with a custom one that displays an app icon and title on the left, and minimize / maximize-restore / close buttons on the right (using **Segoe MDL2 Assets** glyphs). A pill-shaped **"🤖 AI-Generated"** badge is displayed next to the title to clearly indicate AI provenance. The close button shows a red hover state matching Windows 11 conventions. The title bar area is draggable and supports standard window management (double-click to maximize/restore, drag to move, snap layouts). The window starts **maximized**; the defined width (1100) and height (750) are retained as the restore size. The maximize/restore button glyph toggles automatically when the window state changes. |
+| **AI Disclaimer Footer** | A thin footer bar is displayed at the very bottom of the window with the text *"🤖 This application was generated with AI assistance. Verify outputs independently."* The footer is always visible regardless of application state. |
 | **File Loading** |
 | **Timeline Slider** | A slider at the bottom ranges over all parsed actions (0 … N−1). Moving it recomputes and redraws the graph snapshot for that point in time. Snapshot building is also offloaded to a background thread to keep the UI responsive. The current timestamp and action description are displayed above the slider. |
 | **Play / Pause** | A ▶ / ⏸ button starts or stops automatic playback through the timeline. Playback preserves the proportional timing between actions — larger time gaps produce proportionally longer pauses between steps. Because the raw timestamp deltas are often in the millisecond range, the application normalises them on file load so that the median step takes approximately 400 ms at 1× speed. When playback reaches the last action it stops automatically; pressing Play again restarts from the beginning. |

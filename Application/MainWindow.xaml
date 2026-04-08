@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Dependency Graph Viewer"
+        Icon="app.ico"
         Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
@@ -111,6 +112,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Custom title bar -->
@@ -121,6 +123,11 @@
                                VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="Dependency Graph Viewer" FontSize="12" Foreground="#333"
                                FontFamily="Segoe UI" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Background="#E8F0FE" CornerRadius="8" Padding="8,2" Margin="10,0,0,0"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="🤖 AI-Generated" FontSize="10" Foreground="#2E75B6"
+                                   FontFamily="Segoe UI" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </Border>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="&#xE921;" Click="OnMinimize" Style="{StaticResource CaptionButtonStyle}"/>
@@ -301,7 +308,7 @@
         </Grid>
 
         <!-- Timeline slider -->
-        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="16,12" Margin="16,12,16,16">
+        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="16,12" Margin="16,12,16,12">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
             </Border.Effect>
@@ -358,6 +365,13 @@
                             Style="{StaticResource SmallControlButtonStyle}"/>
                 </StackPanel>
             </StackPanel>
+        </Border>
+
+        <!-- AI disclaimer footer -->
+        <Border Grid.Row="4" Background="#E8EBF0" Padding="0,6">
+            <TextBlock Text="🤖 This application was generated with AI assistance. Verify outputs independently."
+                       FontSize="11" Foreground="#888" FontFamily="Segoe UI"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
     </Grid>
 </Window>
