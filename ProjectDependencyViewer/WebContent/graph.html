@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="graph.css">
+<script src="lib/cytoscape.min.js"></script>
+<script src="lib/elk.bundled.js"></script>
+<script src="lib/cytoscape-elk.js"></script>
+</head>
+<body>
+<div id="cy"></div>
+<div id="tooltip"></div>
+<div id="legend">
+  <button id="legend-toggle" title="Toggle legend">ℹ</button>
+  <div id="legend-panel">
+    <div class="legend-title">Dependency Types</div>
+    <div id="legend-items"><span class="legend-empty">No data</span></div>
+  </div>
+</div>
+<script src="graph.js"></script>
+</body>
+</html>

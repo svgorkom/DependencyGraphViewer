@@ -3,5 +3,7 @@
     <File Path="ApplicationFunctionality.md" />
   </Folder>
   <Project Path="Application/DependencyGraphViewer.csproj" />
+  <Project Path="CsprojParser/CsprojParser.csproj" />
   <Project Path="GraphParser/GraphParser.csproj" />
+  <Project Path="ProjectDependencyViewer/ProjectDependencyViewer.csproj" />
 </Solution>
